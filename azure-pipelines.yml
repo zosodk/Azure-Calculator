@@ -16,11 +16,11 @@ variables:
   advancedApiProject: './AdvancedCalculatorApi/AdvancedCalculatorApi.csproj'
   publishOutputBasic: './publish/basic'
   publishOutputAdvanced: './publish/advanced'
+  ANGULAR_APP_NAME: 'calculator-frontend' # Replace with your Angular app name
 
 steps:
 - checkout: self
-  fetchDepth: 0 # Important for GitVersion to analyze history
-
+  fetchDepth: 0
 
 - task: NodeTool@0
   displayName: 'Setup Node.js ($(nodeVersion))'
@@ -33,6 +33,12 @@ steps:
     workingDir: '$(frontendWorkingDirectory)'
     command: 'custom'
     customCommand: 'install -g @angular/cli && npm install && ng build --configuration production'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(frontendWorkingDirectory)/dist/$(ANGULAR_APP_NAME)' # Adjust path if needed
+    ArtifactName: 'frontend-build'
+    publishLocation: 'Container'
 
 - task: DotNetCoreCLI@2
   displayName: 'Setup .NET Core SDK ($(dotnetVersion))'
@@ -65,6 +71,12 @@ steps:
     projects: '$(basicApiProject)'
     arguments: '--configuration $(buildConfiguration) --output $(publishOutputBasic)'
 
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(publishOutputBasic)'
+    ArtifactName: 'backend-basic-build'
+    publishLocation: 'Container'
+
 - task: DotNetCoreCLI@2
   displayName: 'Publish Backend APIs (Advanced API)'
   inputs:
@@ -72,57 +84,38 @@ steps:
     projects: '$(advancedApiProject)'
     arguments: '--configuration $(buildConfiguration) --output $(publishOutputAdvanced)'
 
-- task: AzureWebApp@1
-  displayName: 'Deploy Frontend to Azure Staging Slot'
+- task: PublishBuildArtifacts@1
   inputs:
-    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
-    appName: '$(AZURE_FRONTEND_APP_NAME)'
-    slotName: 'staging'
-    package: '$(frontendWorkingDirectory)/dist/frontend'
+    PathtoPublish: '$(publishOutputAdvanced)'
+    ArtifactName: 'backend-advanced-build'
+    publishLocation: 'Container'
 
-- task: AzureWebApp@1
-  displayName: 'Deploy BasicCalculatorApi to Azure Staging Slot'
-  inputs:
-    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
-    appName: '$(AZURE_BASIC_API_APP_NAME)'
-    slotName: 'staging'
-    package: '$(publishOutputBasic)'
-    appSettings: |
-      ConnectionStrings__DbConnection: $(PG_CONN)
+# Deployment to Azure Static Web Apps (Frontend) - Uncomment when parallelism is granted
+# - task: AzureStaticWebApp@0
+#   inputs:
+#     azure_static_web_apps_api_token: '$(STATIC_WEB_APP_API_TOKEN)'
+#     app_location: '$(frontendWorkingDirectory)'
+#     output_location: '$(frontendWorkingDirectory)/dist/$(ANGULAR_APP_NAME)'
+#     api_location: 'api' # Adjust if you have a Functions backend
+#     deployment_environment: 'production'
+#   displayName: 'Deploy Angular Frontend to Azure Static Web Apps'
 
-- task: AzureWebApp@1
-  displayName: 'Deploy AdvancedCalculatorApi to Azure Staging Slot'
-  inputs:
-    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
-    appName: '$(AZURE_ADVANCED_API_APP_NAME)'
-    slotName: 'staging'
-    package: '$(publishOutputAdvanced)'
-    appSettings: |
-      ConnectionStrings__DbConnection: $(PG_CONN)
+# Deployment to Azure App Service (Backend Basic API) - Uncomment when parallelism is granted
+# - task: AzureWebApp@1
+#   displayName: 'Deploy BasicCalculatorApi to Azure App Service'
+#   inputs:
+#     azureSubscription: 'AzureSubscription_comp2_dsl'
+#     appName: '$(AZURE_BASIC_API_APP_NAME)'
+#     package: '$(publishOutputBasic)'
+#     appSettings: |
+#       ConnectionStrings__DbConnection: $(PG_CONN)
 
-- task: AzureCLI@2
-  displayName: 'Swap Frontend Staging to Production'
-  inputs:
-    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
-    scriptType: 'pscore'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      az webapp deployment slot swap --name "$(AZURE_FRONTEND_APP_NAME)" --resource-group "$(RESOURCE_GROUP)" --slot staging
-
-- task: AzureCLI@2
-  displayName: 'Swap Basic API Staging to Production'
-  inputs:
-    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
-    scriptType: 'pscore'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      az webapp deployment slot swap --name "$(AZURE_BASIC_API_APP_NAME)" --resource-group "$(RESOURCE_GROUP)" --slot staging
-
-- task: AzureCLI@2
-  displayName: 'Swap Advanced API Staging to Production'
-  inputs:
-    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
-    scriptType: 'pscore'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      az webapp deployment slot swap --name "$(AZURE_ADVANCED_API_APP_NAME)" --resource-group "$(RESOURCE_GROUP)" --slot staging
+# Deployment to Azure App Service (Backend Advanced API) - Uncomment when parallelism is granted
+# - task: AzureWebApp@1
+#   displayName: 'Deploy AdvancedCalculatorApi to Azure App Service'
+#   inputs:
+#     azureSubscription: 'AzureSubscription_comp2_dsl'
+#     appName: '$(AZURE_ADVANCED_API_APP_NAME)'
+#     package: '$(publishOutputAdvanced)'
+#     appSettings: |
+#       ConnectionStrings__DbConnection: $(PG_CONN)
