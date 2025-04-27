@@ -1,0 +1,127 @@
+# Azure Pipelines
+# Build and deploy a full-stack calculator application with Angular frontend and .NET backend APIs.
+
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  nodeVersion: '18.x'
+  dotnetVersion: '9.0.x'
+  frontendWorkingDirectory: './frontend'
+  basicApiProject: './BasicCalculatorApi/BasicCalculatorApi.csproj'
+  advancedApiProject: './AdvancedCalculatorApi/AdvancedCalculatorApi.csproj'
+  publishOutputBasic: './publish/basic'
+  publishOutputAdvanced: './publish/advanced'
+
+steps:
+- task: GitVersion@5
+  displayName: Determine Version
+
+- task: NodeTool@0
+  displayName: 'Setup Node.js ($(nodeVersion))'
+  inputs:
+    versionSpec: '$(nodeVersion)'
+
+- task: Npm@1
+  displayName: 'Install Frontend Dependencies and Build'
+  inputs:
+    workingDir: '$(frontendWorkingDirectory)'
+    command: 'custom'
+    customCommand: 'install -g @angular/cli && npm install && ng build --configuration production'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Setup .NET Core SDK ($(dotnetVersion))'
+  inputs:
+    version: '$(dotnetVersion)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restore Backend Dependencies (Basic API)'
+  inputs:
+    command: 'restore'
+    projects: '$(basicApiProject)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restore Backend Dependencies (Advanced API)'
+  inputs:
+    command: 'restore'
+    projects: '$(advancedApiProject)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Build Backend APIs'
+  inputs:
+    command: 'build'
+    projects: '$(basicApiProject);$(advancedApiProject)'
+    arguments: '--configuration $(buildConfiguration) --no-restore'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Publish Backend APIs (Basic API)'
+  inputs:
+    command: 'publish'
+    projects: '$(basicApiProject)'
+    arguments: '--configuration $(buildConfiguration) --output $(publishOutputBasic)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Publish Backend APIs (Advanced API)'
+  inputs:
+    command: 'publish'
+    projects: '$(advancedApiProject)'
+    arguments: '--configuration $(buildConfiguration) --output $(publishOutputAdvanced)'
+
+- task: AzureWebApp@1
+  displayName: 'Deploy Frontend to Azure Staging Slot'
+  inputs:
+    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    appName: '$(AZURE_FRONTEND_APP_NAME)'
+    slotName: 'staging'
+    package: '$(frontendWorkingDirectory)/dist/frontend'
+
+- task: AzureWebApp@1
+  displayName: 'Deploy BasicCalculatorApi to Azure Staging Slot'
+  inputs:
+    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    appName: '$(AZURE_BASIC_API_APP_NAME)'
+    slotName: 'staging'
+    package: '$(publishOutputBasic)'
+    appSettings: |
+      ConnectionStrings__DbConnection: $(PG_CONN)
+
+- task: AzureWebApp@1
+  displayName: 'Deploy AdvancedCalculatorApi to Azure Staging Slot'
+  inputs:
+    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    appName: '$(AZURE_ADVANCED_API_APP_NAME)'
+    slotName: 'staging'
+    package: '$(publishOutputAdvanced)'
+    appSettings: |
+      ConnectionStrings__DbConnection: $(PG_CONN)
+
+- task: AzureCLI@2
+  displayName: 'Swap Frontend Staging to Production'
+  inputs:
+    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    scriptType: 'pscore'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      az webapp deployment slot swap --name "$(AZURE_FRONTEND_APP_NAME)" --resource-group "$(RESOURCE_GROUP)" --slot staging
+
+- task: AzureCLI@2
+  displayName: 'Swap Basic API Staging to Production'
+  inputs:
+    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    scriptType: 'pscore'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      az webapp deployment slot swap --name "$(AZURE_BASIC_API_APP_NAME)" --resource-group "$(RESOURCE_GROUP)" --slot staging
+
+- task: AzureCLI@2
+  displayName: 'Swap Advanced API Staging to Production'
+  inputs:
+    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    scriptType: 'pscore'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      az webapp deployment slot swap --name "$(AZURE_ADVANCED_API_APP_NAME)" --resource-group "$(RESOURCE_GROUP)" --slot staging

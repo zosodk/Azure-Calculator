@@ -1,0 +1,76 @@
+﻿services:
+  postgres_db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: calculator_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      retries: 5
+      
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      - basic_calculator_api
+      - advanced_calculator_api
+    ports:
+      - "3001:80"
+  
+  
+  
+  basic_calculator_api:
+    build:
+      context: .
+      dockerfile: BasicCalculatorApi/Dockerfile
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DbConnection=Host=postgres_db;Port=5432;Database=calculator_db;Username=postgres;Password=password
+      - ASPNETCORE_URLS=http://0.0.0.0:80
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+    networks:
+      - app-network
+
+  advanced_calculator_api:
+      build:
+        context: .
+        dockerfile: AdvancedCalculatorApi/Dockerfile
+      depends_on:
+        postgres_db:
+          condition: service_healthy
+      environment:
+        - ASPNETCORE_ENVIRONMENT=Production
+        - ConnectionStrings__DbConnection=Host=postgres_db;Port=5432;Database=calculator_db;Username=postgres;Password=password
+        - ASPNETCORE_URLS=http://0.0.0.0:80
+      deploy:
+        replicas: 3
+        restart_policy:
+          condition: on-failure
+      networks:
+        - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
