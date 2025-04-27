@@ -21,7 +21,7 @@ steps:
 - checkout: self
   fetchDepth: 0 # Important for GitVersion to analyze history
 
-- task: GitVersion@5
+- task: GitVersion-temp
   inputs:
     runtime: 'core'
   displayName: 'Determine Version'
