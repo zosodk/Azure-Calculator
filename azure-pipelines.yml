@@ -18,8 +18,13 @@ variables:
   publishOutputAdvanced: './publish/advanced'
 
 steps:
+- checkout: self
+  fetchDepth: 0 # Important for GitVersion to analyze history
+
 - task: GitVersion@5
-  displayName: Determine Version
+  inputs:
+    runtime: 'core'
+  displayName: 'Determine Version'
 
 - task: NodeTool@0
   displayName: 'Setup Node.js ($(nodeVersion))'
