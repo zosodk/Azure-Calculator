@@ -75,7 +75,7 @@ steps:
 - task: AzureWebApp@1
   displayName: 'Deploy Frontend to Azure Staging Slot'
   inputs:
-    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
     appName: '$(AZURE_FRONTEND_APP_NAME)'
     slotName: 'staging'
     package: '$(frontendWorkingDirectory)/dist/frontend'
@@ -83,7 +83,7 @@ steps:
 - task: AzureWebApp@1
   displayName: 'Deploy BasicCalculatorApi to Azure Staging Slot'
   inputs:
-    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
     appName: '$(AZURE_BASIC_API_APP_NAME)'
     slotName: 'staging'
     package: '$(publishOutputBasic)'
@@ -93,7 +93,7 @@ steps:
 - task: AzureWebApp@1
   displayName: 'Deploy AdvancedCalculatorApi to Azure Staging Slot'
   inputs:
-    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
     appName: '$(AZURE_ADVANCED_API_APP_NAME)'
     slotName: 'staging'
     package: '$(publishOutputAdvanced)'
@@ -103,7 +103,7 @@ steps:
 - task: AzureCLI@2
   displayName: 'Swap Frontend Staging to Production'
   inputs:
-    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
     scriptType: 'pscore'
     scriptLocation: 'inlineScript'
     inlineScript: |
@@ -112,7 +112,7 @@ steps:
 - task: AzureCLI@2
   displayName: 'Swap Basic API Staging to Production'
   inputs:
-    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
     scriptType: 'pscore'
     scriptLocation: 'inlineScript'
     inlineScript: |
@@ -121,7 +121,7 @@ steps:
 - task: AzureCLI@2
   displayName: 'Swap Advanced API Staging to Production'
   inputs:
-    azureSubscription: '$(AZURE_SUBSCRIPTION)' # Ensure this variable is set in Azure Pipelines
+    azureSubscription: 'AzureSubscription_comp2_dsl' # Ensure this variable is set in Azure Pipelines
     scriptType: 'pscore'
     scriptLocation: 'inlineScript'
     inlineScript: |
